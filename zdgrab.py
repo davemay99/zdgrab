@@ -52,6 +52,8 @@ class verbose_printer:
     ss_id=('SendSafely API key', 'option', None, str, None, 'SS_ID'),
     ss_secret=('SendSafely API secret',
                'option', None, str, None, 'SS_SECRET'),
+    extract=('Automatically extract archives',
+             'flag', 'x', bool, None, 'EXTRACT'),
 )
 def _zdgrab(verbose=False,
             tickets=None,
@@ -60,7 +62,8 @@ def _zdgrab(verbose=False,
             agent='me',
             ss_host=None,
             ss_id=None,
-            ss_secret=None):
+            ss_secret=None,
+            extract=False):
     "Download attachments from Zendesk tickets."
 
     cfg = _zdgrab.getconfig()
@@ -73,11 +76,12 @@ def _zdgrab(verbose=False,
            ss_host=ss_host,
            ss_id=ss_id,
            ss_secret=ss_secret,
-           zdesk_cfg=cfg)
+           zdesk_cfg=cfg,
+           extract=extract)
 
 
 def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
-           zdesk_cfg):
+           zdesk_cfg, extract):
     # ssgrab will only be invoked if the comment body contains a link.
     # See the corresponding REGEX used by them, which has been ported to Python:
     # https://github.com/SendSafely/Windows-Client-API/blob/master/SendsafelyAPI/Utilities/ParseLinksUtility.cs
@@ -122,7 +126,8 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
              f' tickets: {tickets}\n'
              f' count: {count}\n'
              f' work_dir: {work_dir}\n'
-             f' agent: {agent}\n')
+             f' agent: {agent}\n'
+             f' extract: {extract}\n')
 
     # tickets=None means default to getting all of the attachments for this
     # user's open tickets. If tickets is given, try to split it into ints
@@ -281,9 +286,10 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
                         grabs[ticket_dir].append(
                             os.path.join('comments', str(comment_num), name))
 
-                        # Let's try to extract this if it's compressed
-                        os.chdir(comment_dir)
-                        asplode(name, verbose=verbose)
+                        if extract:
+                            # Let's try to extract this if it's compressed
+                            os.chdir(comment_dir)
+                            asplode(name, verbose=verbose)
 
     os.chdir(start_dir)
     return grabs
