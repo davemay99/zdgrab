@@ -328,7 +328,8 @@ def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss
                             # Let's try to extract this if it's compressed
                             os.chdir(comment_dir)
                             asplode(name, verbose=verbose)
-        print("\n------------------------------------------------------------\n")
+
+    print("\n------------------------------------------------------------\n")
 
     os.chdir(start_dir)
     return grabs
