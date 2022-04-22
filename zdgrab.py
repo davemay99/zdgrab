@@ -54,6 +54,8 @@ class verbose_printer:
                'option', None, str, None, 'SS_SECRET'),
     extract=('Automatically extract archives',
              'flag', 'x', bool, None, 'EXTRACT'),
+    dryrun=('Dry run to test without downloading',
+            'flag', 'd', bool, None, 'DRYRUN'),
 )
 def _zdgrab(verbose=False,
             tickets=None,
@@ -63,7 +65,8 @@ def _zdgrab(verbose=False,
             ss_host=None,
             ss_id=None,
             ss_secret=None,
-            extract=False):
+            extract=False,
+            dryrun=False):
     "Download attachments from Zendesk tickets."
 
     cfg = _zdgrab.getconfig()
@@ -77,11 +80,12 @@ def _zdgrab(verbose=False,
            ss_id=ss_id,
            ss_secret=ss_secret,
            zdesk_cfg=cfg,
-           extract=extract)
+           extract=extract,
+           dryrun=dryrun)
 
 
 def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
-           zdesk_cfg, extract):
+           zdesk_cfg, extract, dryrun):
     # ssgrab will only be invoked if the comment body contains a link.
     # See the corresponding REGEX used by them, which has been ported to Python:
     # https://github.com/SendSafely/Windows-Client-API/blob/master/SendsafelyAPI/Utilities/ParseLinksUtility.cs
@@ -127,7 +131,8 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
              f' count: {count}\n'
              f' work_dir: {work_dir}\n'
              f' agent: {agent}\n'
-             f' extract: {extract}\n')
+             f' extract: {extract}\n'
+             f' dryrun: {dryrun}\n')
 
     # tickets=None means default to getting all of the attachments for this
     # user's open tickets. If tickets is given, try to split it into ints
@@ -200,6 +205,9 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
         ticket_com_dir = os.path.join(ticket_dir, 'comments')
         comment_num = 0
         attach_num = 0
+
+        if dryrun == True:
+            continue
 
         response = zd.ticket_audits(ticket_id=ticket['id'],
                                     get_all_pages=True)
