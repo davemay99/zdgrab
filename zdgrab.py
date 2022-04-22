@@ -9,6 +9,7 @@ import re
 import textwrap
 import base64
 import subprocess
+import json
 
 import zdeskcfg
 from zdesk import Zendesk
@@ -219,6 +220,24 @@ def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss
 
         if dryrun == True:
             continue
+
+        # Ensure ticket directory exists
+        if not os.path.isdir(ticket_dir):
+            os.makedirs(ticket_dir)
+
+        # Write ticket JSON to file
+        ticket_json_filename = os.path.join(
+            ticket_dir,
+            f'{ticket["id"]}-meta.json')
+        with open(ticket_json_filename, 'w') as fp:
+            json.dump(ticket, fp, indent=4, sort_keys=True)
+
+        # Write ticket summary to file
+        ticket_summary_filename = os.path.join(
+            ticket_dir,
+            f'{ticket["id"]}-summary.txt')
+        with open(ticket_summary_filename, 'w') as f:
+            f.write(ticket["description"])
 
         response = zd.ticket_audits(ticket_id=ticket['id'],
                                     get_all_pages=True)
