@@ -22,6 +22,7 @@ try:
 except ModuleNotFoundError:
     ss_present = False
 
+
 class verbose_printer:
     def __init__(self, v):
         if v:
@@ -35,30 +36,34 @@ class verbose_printer:
     def null_print(self, msg, end='\n'):
         pass
 
+
 @zdeskcfg.configure(
     verbose=('verbose output', 'flag', 'v'),
     tickets=('Ticket(s) to grab attachments (default: all of your open tickets)',
              'option', 't', str, None, 'TICKETS'),
     count=('Retrieve up to this many attachments (default: 0, all)',
-             'option', 'c', int, None, 'COUNT'),
+           'option', 'c', int, None, 'COUNT'),
     work_dir=('Working directory in which to store attachments. (default: ~/zdgrab)',
               'option', 'w', str, None, 'WORK_DIR'),
     agent=('Agent whose open tickets to search (default: me)',
            'option', 'a', str, None, 'AGENT'),
     ss_host=('SendSafely host to connect to, including protocol',
-               'option', None, str, None, 'SS_HOST'),
+             'option', None, str, None, 'SS_HOST'),
     ss_id=('SendSafely API key', 'option', None, str, None, 'SS_ID'),
     ss_secret=('SendSafely API secret',
                'option', None, str, None, 'SS_SECRET'),
+    extract=('Automatically extract archives',
+             'flag', 'x', bool, None, 'EXTRACT'),
 )
 def _zdgrab(verbose=False,
-           tickets=None,
-           count=0,
-           work_dir=os.path.join(os.path.expanduser('~'), 'zdgrab'),
-           agent='me',
-           ss_host=None,
-           ss_id=None,
-           ss_secret=None):
+            tickets=None,
+            count=0,
+            work_dir=os.path.join(os.path.expanduser('~'), 'zdgrab'),
+            agent='me',
+            ss_host=None,
+            ss_id=None,
+            ss_secret=None,
+            extract=False):
     "Download attachments from Zendesk tickets."
 
     cfg = _zdgrab.getconfig()
@@ -71,11 +76,12 @@ def _zdgrab(verbose=False,
            ss_host=ss_host,
            ss_id=ss_id,
            ss_secret=ss_secret,
-           zdesk_cfg=cfg)
+           zdesk_cfg=cfg,
+           extract=extract)
 
 
 def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
-           zdesk_cfg):
+           zdesk_cfg, extract):
     # ssgrab will only be invoked if the comment body contains a link.
     # See the corresponding REGEX used by them, which has been ported to Python:
     # https://github.com/SendSafely/Windows-Client-API/blob/master/SendsafelyAPI/Utilities/ParseLinksUtility.cs
@@ -88,7 +94,7 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
             zdesk_cfg.get('zdesk_oauth') or
             (zdesk_cfg.get('zdesk_email') and zdesk_cfg.get('zdesk_password')) or
             (zdesk_cfg.get('zdesk_email') and zdesk_cfg.get('zdesk_api'))
-            ):
+    ):
         vp.print(f'Configuring Zendesk with:\n'
                  f'  url: {zdesk_cfg.get("zdesk_url")}\n'
                  f'  email: {zdesk_cfg.get("zdesk_email")}\n'
@@ -120,7 +126,8 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
              f' tickets: {tickets}\n'
              f' count: {count}\n'
              f' work_dir: {work_dir}\n'
-             f' agent: {agent}\n')
+             f' agent: {agent}\n'
+             f' extract: {extract}\n')
 
     # tickets=None means default to getting all of the attachments for this
     # user's open tickets. If tickets is given, try to split it into ints
@@ -177,7 +184,7 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
     # We're going to borrow the zdesk object's httplib client.
     headers = {}
     if zd.zdesk_email is not None and zd.zdesk_password is not None:
-        basic = base64.b64encode(zd.zdesk_email.encode('ascii') + 
+        basic = base64.b64encode(zd.zdesk_email.encode('ascii') +
                                  b':' + zd.zdesk_password.encode('ascii'))
         headers["Authorization"] = f"Basic {basic}"
 
@@ -211,7 +218,7 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
                 comment_dir = os.path.join(ticket_com_dir, str(comment_num))
 
                 if count > 0 and attach_num >= count:
-                        break
+                    break
 
                 for attachment in event['attachments']:
                     attach_num += 1
@@ -223,7 +230,8 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
 
                     name = attachment['file_name']
                     if os.path.isfile(os.path.join(comment_dir, name)):
-                        vp.print(f' Attachment {name} already present{attach_msg}')
+                        vp.print(
+                            f' Attachment {name} already present{attach_msg}')
                         continue
 
                     # Get this attachment
@@ -278,9 +286,10 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
                         grabs[ticket_dir].append(
                             os.path.join('comments', str(comment_num), name))
 
-                        # Let's try to extract this if it's compressed
-                        os.chdir(comment_dir)
-                        asplode(name, verbose=verbose)
+                        if extract:
+                            # Let's try to extract this if it's compressed
+                            os.chdir(comment_dir)
+                            asplode(name, verbose=verbose)
 
     os.chdir(start_dir)
     return grabs
