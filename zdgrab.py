@@ -191,7 +191,7 @@ def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss
         print("No tickets provided for attachment retrieval.")
         return {}
     else:
-        vp.print(f'Located {response["count"]} tickets')
+        print(f'\t{response["count"]} tickets found')
 
     results = response[result_field]
 
@@ -209,7 +209,8 @@ def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss
             # This is not actually a ticket. Weird. Skip it.
             continue
 
-        vp.print(f'Ticket {ticket["id"]}')
+        print("\n------------------------------------------------------------\n")
+        print(f'{ticket["id"]} - {ticket["subject"]}')
 
         ticket_dir = os.path.join(work_dir, str(ticket['id']))
         ticket_com_dir = os.path.join(ticket_dir, 'comments')
@@ -308,6 +309,7 @@ def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss
                             # Let's try to extract this if it's compressed
                             os.chdir(comment_dir)
                             asplode(name, verbose=verbose)
+        print("\n------------------------------------------------------------\n")
 
     os.chdir(start_dir)
     return grabs
