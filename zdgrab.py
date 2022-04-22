@@ -47,6 +47,7 @@ class verbose_printer:
               'option', 'w', str, None, 'WORK_DIR'),
     agent=('Agent whose open tickets to search (default: me)',
            'option', 'a', str, None, 'AGENT'),
+    product=('Product to search', 'option', 'p', str, None, 'PRODUCT'),
     ss_host=('SendSafely host to connect to, including protocol',
              'option', None, str, None, 'SS_HOST'),
     ss_id=('SendSafely API key', 'option', None, str, None, 'SS_ID'),
@@ -62,6 +63,7 @@ def _zdgrab(verbose=False,
             count=0,
             work_dir=os.path.join(os.path.expanduser('~'), 'zdgrab'),
             agent='me',
+            product='nomad',
             ss_host=None,
             ss_id=None,
             ss_secret=None,
@@ -76,6 +78,7 @@ def _zdgrab(verbose=False,
            count=count,
            work_dir=work_dir,
            agent=agent,
+           product=product,
            ss_host=ss_host,
            ss_id=ss_id,
            ss_secret=ss_secret,
@@ -84,7 +87,7 @@ def _zdgrab(verbose=False,
            dryrun=dryrun)
 
 
-def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
+def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss_secret,
            zdesk_cfg, extract, dryrun):
     # ssgrab will only be invoked if the comment body contains a link.
     # See the corresponding REGEX used by them, which has been ported to Python:
@@ -131,6 +134,7 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
              f' count: {count}\n'
              f' work_dir: {work_dir}\n'
              f' agent: {agent}\n'
+             f' product: {product}\n'
              f' extract: {extract}\n'
              f' dryrun: {dryrun}\n')
 
@@ -162,16 +166,22 @@ def zdgrab(verbose, tickets, count, work_dir, agent, ss_host, ss_id, ss_secret,
     # Change to working directory to begin file output
     os.chdir(work_dir)
 
-    vp.print('Retrieving tickets')
-
     if tickets:
         # tickets given, query for those
+        vp.print(f'Retrieving ticket id(s) {tickets}')
         response = zd.tickets_show_many(ids=','.join([s for s in map(str, tickets)]),
                                         get_all_pages=True)
         result_field = 'tickets'
+    elif product:
+        # Product given, get all tickets for product
+        vp.print(f'Retrieving open tickets for product = {product}')
+        q = f'status<solved product:{product}'
+        response = zd.search(query=q, get_all_pages=True)
+        result_field = 'results'
     else:
         # List of tickets not given. Get all of the attachments for all of this
         # user's open tickets.
+        vp.print(f'Retrieving ticket(s) for agent {agent}')
         q = f'status<solved assignee:{agent}'
         response = zd.search(query=q, get_all_pages=True)
         result_field = 'results'
