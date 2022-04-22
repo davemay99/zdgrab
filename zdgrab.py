@@ -9,6 +9,7 @@ import re
 import textwrap
 import base64
 import subprocess
+import json
 
 import zdeskcfg
 from zdesk import Zendesk
@@ -168,20 +169,20 @@ def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss
 
     if tickets:
         # tickets given, query for those
-        vp.print(f'Retrieving ticket id(s) {tickets}')
+        print(f'Retrieving ticket id(s) {tickets}')
         response = zd.tickets_show_many(ids=','.join([s for s in map(str, tickets)]),
                                         get_all_pages=True)
         result_field = 'tickets'
     elif product:
         # Product given, get all tickets for product
-        vp.print(f'Retrieving open tickets for product = {product}')
+        print(f'Retrieving open tickets for product = {product}')
         q = f'status<solved product:{product}'
         response = zd.search(query=q, get_all_pages=True)
         result_field = 'results'
     else:
         # List of tickets not given. Get all of the attachments for all of this
         # user's open tickets.
-        vp.print(f'Retrieving ticket(s) for agent {agent}')
+        print(f'Retrieving ticket(s) for agent {agent}')
         q = f'status<solved assignee:{agent}'
         response = zd.search(query=q, get_all_pages=True)
         result_field = 'results'
@@ -191,7 +192,7 @@ def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss
         print("No tickets provided for attachment retrieval.")
         return {}
     else:
-        vp.print(f'Located {response["count"]} tickets')
+        print(f'\t{response["count"]} tickets found')
 
     results = response[result_field]
 
@@ -209,7 +210,8 @@ def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss
             # This is not actually a ticket. Weird. Skip it.
             continue
 
-        vp.print(f'Ticket {ticket["id"]}')
+        print("\n------------------------------------------------------------\n")
+        print(f'{ticket["id"]} - {ticket["subject"]}')
 
         ticket_dir = os.path.join(work_dir, str(ticket['id']))
         ticket_com_dir = os.path.join(ticket_dir, 'comments')
@@ -218,6 +220,24 @@ def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss
 
         if dryrun == True:
             continue
+
+        # Ensure ticket directory exists
+        if not os.path.isdir(ticket_dir):
+            os.makedirs(ticket_dir)
+
+        # Write ticket JSON to file
+        ticket_json_filename = os.path.join(
+            ticket_dir,
+            f'{ticket["id"]}-meta.json')
+        with open(ticket_json_filename, 'w') as fp:
+            json.dump(ticket, fp, indent=4, sort_keys=True)
+
+        # Write ticket summary to file
+        ticket_summary_filename = os.path.join(
+            ticket_dir,
+            f'{ticket["id"]}-summary.txt')
+        with open(ticket_summary_filename, 'w') as f:
+            f.write(ticket["description"])
 
         response = zd.ticket_audits(ticket_id=ticket['id'],
                                     get_all_pages=True)
@@ -308,6 +328,8 @@ def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss
                             # Let's try to extract this if it's compressed
                             os.chdir(comment_dir)
                             asplode(name, verbose=verbose)
+
+    print("\n------------------------------------------------------------\n")
 
     os.chdir(start_dir)
     return grabs
