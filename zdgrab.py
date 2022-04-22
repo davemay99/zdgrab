@@ -169,20 +169,20 @@ def zdgrab(verbose, tickets, count, work_dir, agent, product, ss_host, ss_id, ss
 
     if tickets:
         # tickets given, query for those
-        vp.print(f'Retrieving ticket id(s) {tickets}')
+        print(f'Retrieving ticket id(s) {tickets}')
         response = zd.tickets_show_many(ids=','.join([s for s in map(str, tickets)]),
                                         get_all_pages=True)
         result_field = 'tickets'
     elif product:
         # Product given, get all tickets for product
-        vp.print(f'Retrieving open tickets for product = {product}')
+        print(f'Retrieving open tickets for product = {product}')
         q = f'status<solved product:{product}'
         response = zd.search(query=q, get_all_pages=True)
         result_field = 'results'
     else:
         # List of tickets not given. Get all of the attachments for all of this
         # user's open tickets.
-        vp.print(f'Retrieving ticket(s) for agent {agent}')
+        print(f'Retrieving ticket(s) for agent {agent}')
         q = f'status<solved assignee:{agent}'
         response = zd.search(query=q, get_all_pages=True)
         result_field = 'results'
